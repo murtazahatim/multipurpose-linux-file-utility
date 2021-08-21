@@ -6,12 +6,12 @@
 */
 
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#define DEFAULT_INPUT_FILE "sample.txt"
 
 // Declaring an enum for different errors and an array for their messages
 enum errorTypes {
@@ -27,8 +27,10 @@ static const char * errorMessages[] = {
 };
 
 // Function Prototypes
-void writeFromInputFileToOutputFile(int numberOfLines, int infile, int outfile);
-void writeFromInputFileToStdOut(int numberOfLines, int infile);
+void writeFromInputFileToOutputFile(int numberOfLines, bool isTailCommand, int infile, int outfile);
+void writeFromInputFileToStdOut(int numberOfLines, bool isTailCommand, int infile);
+void readFromHeadAndWrite(int numberOfLines, int infile, int outfile);
+void readFromTailAndWrite(int numberOfLines, int infile, int outfile);
 void throwError(enum errorTypes errorType);
 char* formatOutputFileName(char* outputDir, char* inputFilePath);
 
@@ -41,26 +43,25 @@ int main(int argc, char *argv[]) {
     // Declaring input and output file variables
     int infile, outfile = 1, numberOfLines = 10;
 
-    // Boolean to check if text needs to be written to a different file or displayed in the terminal
-    bool writeToFile = false;
+    // Boolean checks to control program flow based on argument values
+    bool isWriteToFile = false, isTailCommand = false;
 
     /* Since input file argument is always first, it can directly be assigned to the inputFilename variable:
-       If inputFilename is passed as an argument, assign that. Otherwise, assign "sample.txt" */
-    if (argc >= 2 && (strcmp(argv[1], "-d") || strcmp(argv[1], "-n"))) {
-        strcpy(inputFilename, argv[1]);
-    }
-    else {
-        strcpy(inputFilename, "sample.txt");
-    }
+       If inputFilename is passed as an argument, assign that. Otherwise, assign DEFAULT_INPUT_FILE */
+    (argc >= 2 && (strcmp(argv[1], "-d") && strcmp(argv[1], "-n") && strcmp(argv[1], "-L"))) ? strcpy(inputFilename, argv[1]) :
+    strcpy(inputFilename, DEFAULT_INPUT_FILE);
 
     // Getting output directory and number of lines to read from the input file from arguments
     for(int argInd = 1; argInd < argc; argInd++) {
         if (!strcmp(argv[argInd], "-d")) {
             strcpy(outputFilename, formatOutputFileName(argv[argInd + 1], inputFilename));
-            writeToFile = true;
+            isWriteToFile = true;
         }
-        if (!strcmp(argv[argInd], "-n")) {
+        else if (!strcmp(argv[argInd], "-n")) {
             numberOfLines = atoi(argv[argInd + 1]);
+        }
+        else if (!strcmp(argv[argInd], "-L")) {
+            isTailCommand = true;
         }
     }
 
@@ -72,7 +73,7 @@ int main(int argc, char *argv[]) {
     // Free the inputFileName pointer
     free(inputFilename);
 
-    if (writeToFile) {
+    if (isWriteToFile) {
 
         // Opening the output file
         if ((outfile = open(outputFilename, O_WRONLY | O_TRUNC | O_CREAT, 0664)) < 0) {
@@ -82,18 +83,25 @@ int main(int argc, char *argv[]) {
         // Free the outputFileName pointer
         free(outputFilename);
 
-        writeFromInputFileToOutputFile(numberOfLines, infile, outfile);
+        writeFromInputFileToOutputFile(numberOfLines, isTailCommand, infile, outfile);
     }
     else {
-        writeFromInputFileToStdOut(numberOfLines, infile);
+        writeFromInputFileToStdOut(numberOfLines, isTailCommand, infile);
     }
 
     return 0;
 }
 
 // Supplementary Functions
-void writeFromInputFileToOutputFile(int numberOfLines, int infile, int outfile) {
+void writeFromInputFileToOutputFile(int numberOfLines, bool isTailCommand, int infile, int outfile) {
+    isTailCommand ? readFromTailAndWrite(numberOfLines, infile, outfile): readFromHeadAndWrite(numberOfLines, infile, outfile);
+}
 
+void writeFromInputFileToStdOut(int numberOfLines, bool isTailCommand, int infile) {
+    writeFromInputFileToOutputFile(numberOfLines, isTailCommand, infile, 1);
+}
+
+void readFromHeadAndWrite(int numberOfLines, int infile, int outfile) {
     int bytesRead, lineCounter = 0, endIndex = 0;
     char buff[1024];
 
@@ -122,11 +130,22 @@ void writeFromInputFileToOutputFile(int numberOfLines, int infile, int outfile) 
         }
     }
 
+    if (outfile != 1) {
+        close(outfile);
+    }
     close(infile);
 }
 
-void writeFromInputFileToStdOut(int numberOfLines, int infile) {
-    writeFromInputFileToOutputFile(numberOfLines, infile, 1);
+void readFromTailAndWrite(int numberOfLines, int infile, int outfile) {
+    int bytesRead, lineCounter = 0, endIndex = 0, iterationCounter = 0;
+    int totalBytesInfile = lseek(infile, 0, SEEK_END);
+    char buff[1024];
+
+
+    if (outfile != 1) {
+        close(outfile);
+    }
+    close(infile);
 }
 
 void throwError(enum errorTypes errorType) {
@@ -145,14 +164,19 @@ char* formatOutputFileName(char* outputDir, char* inputFilePath) {
         strcat(outputFilePath, "/");
     }
 
-    do {
-        char *tempString = (char *) malloc(sizeof(char) * 50);
-        strncat(tempString, inputFilePath + counter, 1);
-        strcat(tempString, outputFileName);
-        strcpy(outputFileName, tempString);
-        free(tempString);
-        counter -= 1;
-    } while (*(inputFilePath + counter) != '/');
+    if (strcmp(inputFilePath, DEFAULT_INPUT_FILE)) {
+        do {
+            char *tempString = (char *) malloc(sizeof(char) * 50);
+            strncat(tempString, inputFilePath + counter, 1);
+            strcat(tempString, outputFileName);
+            strcpy(outputFileName, tempString);
+            free(tempString);
+            counter -= 1;
+        } while (*(inputFilePath + counter) != '/');
+    }
+    else {
+        strcpy(outputFileName, inputFilePath);
+    }
 
     strcat(outputFilePath, outputFileName);
 
