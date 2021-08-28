@@ -1,3 +1,5 @@
+![repo-size](https://img.shields.io/github/repo-size/murtazahatim/multipurpose-linux-file-utility)
+[![LinkedIn](https://img.shields.io/badge/linkedin-connect-blue)](https://www.linkedin.com/in/murtaza-rangwala-889064160/)
 ### NAME:
 fileutil - linux file utility tool
 ### SYNOPSIS:
