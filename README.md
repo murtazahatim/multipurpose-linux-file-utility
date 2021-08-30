@@ -18,7 +18,7 @@ writes output to output directory provided after the -d flag instead of standard
 #### -L
 reads from tail instead of head and counts number of lines backwards
 
-###SETUP:
+### SETUP:
 1. Put all the provided project files in the same directory
 2. Run the command `make` in the terminal to compile the project
 3. An executable called fileutil is generated
