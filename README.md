@@ -23,6 +23,6 @@ reads from tail instead of head and counts number of lines backwards
 2. Run the command `make` in the terminal to compile the project
 3. An executable called fileutil is generated
 4. Run the executable in the terminal using ./fileutil
-5. 
+
 ### AUTHOR:
 #### Written by Murtaza Rangwala
